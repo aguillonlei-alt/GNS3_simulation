@@ -1,7 +1,7 @@
 import paramiko
 import time
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 import hashlib
 import schedule
 
@@ -14,7 +14,8 @@ DEVICES = {
     "SPINE": {"ip": "10.0.1.2", "username": "admin", "password": "cisco"},
 }
 
-BACKUP_DIR = "./backups"
+# Save directly to your current folder (~/backups/backups)
+BACKUP_DIR = "."
 LOG_FILE = "./backup_log.txt"
 
 CISCO_SSH_CONFIG = {
@@ -48,27 +49,28 @@ def ssh_connect(host, username, password):
                    look_for_keys=False, allow_agent=False, timeout=10)
     return client
 
-def get_running_config(client):
-    """Run 'show running-config' and return output."""
-    shell = client.invoke_shell()
-    time.sleep(1)
+def get_running_config(shell):
+    """Run 'show running-config' and return full output."""
     shell.send("terminal length 0\n")
     time.sleep(1)
     shell.send("show running-config\n")
-    time.sleep(5)
-    output = shell.recv(99999).decode(errors="ignore")
+    time.sleep(8)  # wait to ensure full config output
+    output = ""
+    while shell.recv_ready():
+        output += shell.recv(99999).decode(errors="ignore")
+        time.sleep(1)
     return output
 
 def save_backup(device_name, output):
-    """Save config and detect changes."""
+    """Save config with timestamped filename."""
     os.makedirs(BACKUP_DIR, exist_ok=True)
-    filename = f"{BACKUP_DIR}/{device_name}_running-config.txt"
-
-    # Save new backup
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"{BACKUP_DIR}/{device_name}_running-config_.txt"
     with open(filename, "w") as f:
         f.write(output)
     log(f"[💾] Saved backup for {device_name}: {filename}")
-    
+    log(f"[DEBUG] {device_name} config size: {len(output)} characters")
+
 # ------------------------------
 # MAIN BACKUP FLOW
 # ------------------------------
@@ -78,16 +80,11 @@ def backup_all():
     # Step 1: Connect to PE
     pe = ssh_connect(DEVICES["PE"]["ip"], DEVICES["PE"]["username"], DEVICES["PE"]["password"])
     log("[+] Connected to PE.")
-
     shell = pe.invoke_shell()
     time.sleep(1)
 
-    # Get PE config
-    shell.send("terminal length 0\n")
-    time.sleep(1)
-    shell.send("show running-config\n")
-    time.sleep(5)
-    output_pe = shell.recv(99999).decode(errors="ignore")
+    # Backup PE
+    output_pe = get_running_config(shell)
     save_backup("PE", output_pe)
 
     # Step 2: From PE → EOR1
@@ -96,9 +93,7 @@ def backup_all():
     time.sleep(2)
     shell.send("cisco\n")
     time.sleep(3)
-    shell.send("terminal length 0\nshow running-config\n")
-    time.sleep(6)
-    output_eor1 = shell.recv(99999).decode(errors="ignore")
+    output_eor1 = get_running_config(shell)
     save_backup("EOR1", output_eor1)
 
     # Step 3: From EOR1 → SPINE
@@ -107,22 +102,21 @@ def backup_all():
     time.sleep(2)
     shell.send("cisco\n")
     time.sleep(3)
-    shell.send("terminal length 0\nshow running-config\n")
-    time.sleep(6)
-    output_spine = shell.recv(99999).decode(errors="ignore")
+    output_spine = get_running_config(shell)
     save_backup("SPINE", output_spine)
 
     shell.close()
     pe.close()
 
-    cleanup_old_backups()
     log("[✅] Backup process complete for PE, EOR1, and SPINE.")
-    log("-" * 50)
+    log("-" * 60)
 
+# ------------------------------
+# SCHEDULER
+# ------------------------------
 schedule.every(1).minutes.do(backup_all)
 
 # Infinite loop to keep the script running
 while True:
-   schedule.run_pending()
-   time.sleep(1)  # Wait for 1 second before checking the schedule again
-
+    schedule.run_pending()
+    time.sleep(1)
