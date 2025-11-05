@@ -45,7 +45,8 @@ def upload_to_sftp(server, username, password, local_path, remote_path):
        transport = paramiko.Transport((server, 22))
        transport.connect(username=username, password=password)
        sftp = paramiko.SFTPClient.from_transport(transport)
-
+      print("SFTP conncetion Ok")
+      
        # Upload the file
        sftp.put(local_path, remote_path)
 
@@ -71,8 +72,8 @@ def main():
 
    # SFTP server credentials
    sftp_server = "192.168.37.128"  # IP address of the SFTP server
-   sftp_username = ""  # Username for accessing the SFTP server
-   sftp_password = ""  # Password for accessing the SFTP server
+   sftp_username = "gns3"  # Username for accessing the SFTP server
+   sftp_password = "gns3"  # Password for accessing the SFTP server
    for router in routers:
        config = get_cisco_config(router["hostname"], router["username"], router["password"], router["enable_password"])
        if config:
@@ -81,6 +82,8 @@ def main():
            local_path = f"running_config_{router['hostname']}.txt"
            with open(local_path, "w") as f:
                f.write(config)
+              
+         print("file ready")         
 
            # Upload the running configuration to SFTP server
            upload_to_sftp(sftp_server, sftp_username, sftp_password, local_path, f"/running_config_{router['hostname']}.txt")
