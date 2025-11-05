@@ -1,0 +1,107 @@
+import os
+import time
+import schedule
+import paramiko
+from datetime import datetime
+from netmiko import ConnectHandler
+
+# 🔧 Optional fix for KEX error
+paramiko.Transport._preferred_kex = (
+    'diffie-hellman-group14-sha1',
+    'diffie-hellman-group-exchange-sha1',
+    'diffie-hellman-group-exchange-sha256',
+)
+
+# === SSH device definitions ===
+DEVICES = [
+    {
+        "name": "PE",
+        "params": {
+            "device_type": "cisco_ios",
+            "host": "192.168.126.10",
+            "username": "admin",
+            "password": "admin123",
+            "secret": "admin123"
+        }
+    },
+    {
+        "name": "EDR1",
+        "params": {
+            "device_type": "cisco_ios",
+            "host": "10.0.0.2",
+            "username": "admin",
+            "password": "admin123",
+            "secret": "admin123"
+        }
+    },
+]
+
+# === SFTP server details ===
+SFTP_SERVER = {
+    "host": "192.168.37.128",      # GNS3 VM IP
+    "port": 22,
+    "username": "gns3",            # GNS3 user
+    "password": "gns3pass",        # GNS3 password
+    "remote_dir": "/home/gns3/remote_backups"
+}
+
+LOCAL_BACKUP_DIR = "./backups"
+os.makedirs(LOCAL_BACKUP_DIR, exist_ok=True)
+
+# === Function to back up a Cisco router ===
+def backup_device(device):
+    name = device["name"]
+    params = device["params"]
+
+    try:
+        print(f"[*] Connecting to {name}...")
+        net_connect = ConnectHandler(**params)
+        net_connect.enable()
+        output = net_connect.send_command("show running-config")
+
+        filename = f"{name}_running-config_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        filepath = os.path.join(LOCAL_BACKUP_DIR, filename)
+
+        with open(filepath, "w") as f:
+            f.write(output)
+        print(f"[+] Backup complete for {name} → {filepath}")
+        net_connect.disconnect()
+        return filepath
+
+    except Exception as e:
+        print(f"[!] Error backing up {name}: {e}")
+        return None
+
+# === Function to upload via SFTP ===
+def upload_sftp(local_file):
+    try:
+        print("[*] Connecting to SFTP server...")
+        transport = paramiko.Transport((SFTP_SERVER["host"], SFTP_SERVER["port"]))
+        transport.connect(username=SFTP_SERVER["username"], password=SFTP_SERVER["password"])
+        sftp = paramiko.SFTPClient.from_transport(transport)
+
+        remote_path = os.path.join(SFTP_SERVER["remote_dir"], os.path.basename(local_file))
+        sftp.put(local_file, remote_path)
+        sftp.close()
+        transport.close()
+        print(f"[+] Uploaded {os.path.basename(local_file)} to {remote_path}")
+
+    except Exception as e:
+        print(f"[!] SFTP upload failed: {e}")
+
+# === Main job ===
+def backup_all():
+    print("\n[*] Starting automated multi-hop backup sequence...")
+    for device in DEVICES:
+        backup_file = backup_device(device)
+        if backup_file:
+            upload_sftp(backup_file)
+
+# === Schedule ===
+schedule.every().day.at("03:00").do(backup_all)
+
+if __name__ == "__main__":
+    backup_all()  # run immediately once
+    while True:
+        schedule.run_pending()
+        time.sleep(60)
