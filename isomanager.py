@@ -3,6 +3,7 @@ import time
 import os
 from datetime import datetime, timedelta
 import hashlib
+import schedule
 
 # ------------------------------
 # CONFIGURATION SECTION
@@ -15,7 +16,6 @@ DEVICES = {
 
 BACKUP_DIR = "./backups"
 LOG_FILE = "./backup_log.txt"
-DAYS_TO_KEEP = 7
 
 CISCO_SSH_CONFIG = {
     'kex_algorithms': ['diffie-hellman-group1-sha1', 'diffie-hellman-group14-sha1'],
@@ -35,17 +35,6 @@ def log(msg):
 def md5sum(text):
     """Generate MD5 hash of a config for comparison."""
     return hashlib.md5(text.encode('utf-8')).hexdigest()
-
-def cleanup_old_backups():
-    """Delete backups older than DAYS_TO_KEEP."""
-    now = datetime.now()
-    for f in os.listdir(BACKUP_DIR):
-        file_path = os.path.join(BACKUP_DIR, f)
-        if os.path.isfile(file_path):
-            mtime = datetime.fromtimestamp(os.path.getmtime(file_path))
-            if (now - mtime).days > DAYS_TO_KEEP:
-                os.remove(file_path)
-                log(f"[🧹] Deleted old backup: {f}")
 
 def ssh_connect(host, username, password):
     """Connect to a Cisco router."""
@@ -72,31 +61,13 @@ def get_running_config(client):
 
 def save_backup(device_name, output):
     """Save config and detect changes."""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs(BACKUP_DIR, exist_ok=True)
-    filename = f"{BACKUP_DIR}/{device_name}_running-config_{timestamp}.txt"
+    filename = f"{BACKUP_DIR}/{device_name}_running-config.txt"
 
     # Save new backup
     with open(filename, "w") as f:
         f.write(output)
-
-    # Compare with previous backup (if any)
-    previous_files = sorted(
-        [f for f in os.listdir(BACKUP_DIR) if f.startswith(device_name)],
-        reverse=True
-    )
-    if len(previous_files) > 1:
-        with open(os.path.join(BACKUP_DIR, previous_files[1]), "r") as prev_file:
-            old_config = prev_file.read()
-            if md5sum(old_config) != md5sum(output):
-                log(f"[⚠️] {device_name} configuration CHANGED since last backup!")
-            else:
-                log(f"[✅] {device_name} configuration unchanged.")
-    else:
-        log(f"[+] First backup for {device_name} created.")
-
-    log(f"[💾] Saved backup for {device_name}: {filename}")
-
+        
 # ------------------------------
 # MAIN BACKUP FLOW
 # ------------------------------
@@ -147,8 +118,10 @@ def backup_all():
     log("[✅] Backup process complete for PE, EOR1, and SPINE.")
     log("-" * 50)
 
-# ------------------------------
-# RUN SCRIPT
-# ------------------------------
-if __name__ == "__main__":
-    backup_all()
+schedule.every(1).minutes.do(backup_all)
+
+# Infinite loop to keep the script running
+while True:
+   schedule.run_pending()
+   time.sleep(1)  # Wait for 1 second before checking the schedule again
+
