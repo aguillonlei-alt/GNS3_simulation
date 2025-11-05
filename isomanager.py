@@ -67,7 +67,8 @@ def save_backup(device_name, output):
     # Save new backup
     with open(filename, "w") as f:
         f.write(output)
-        
+    log(f"[💾] Saved backup for {device_name}: {filename}")
+    
 # ------------------------------
 # MAIN BACKUP FLOW
 # ------------------------------
