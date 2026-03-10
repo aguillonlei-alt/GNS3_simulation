@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>STM B2B Core Data Tracker</title>
+    <style>
+        /* --- GLOBE TELECOM ENTERPRISE THEME --- */
+        :root {
+            --globe-blue: #0038A8; 
+            --globe-cyan: #00AEEF;
+            --bg-light: #f4f7f9;
+            --border-color: #cbd5e1;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        /* --- PREMIUM STATIC ENTERPRISE BACKGROUND --- */
+        body { 
+            font-family: 'Segoe UI', Roboto, Arial, sans-serif; 
+            margin: 0; 
+            padding: 40px 20px; 
+            color: var(--text-main);
+            
+            /* Rich, deep static Globe Blue gradient with a subtle tech grid */
+            background-color: #001a4d;
+            background-image: 
+                radial-gradient(circle at top right, #0038A8 0%, transparent 60%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            background-attachment: fixed;
+        }
+
+        /* --- CONTAINER --- */
+        .container { 
+            max-width: 850px; 
+            background: white; 
+            padding: 35px 45px; 
+            border-radius: 14px; 
+            margin: auto; 
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4); 
+            position: relative;
+            z-index: 10;
+        }
+        
+        /* Header */
+        .header-section { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 25px; }
+        .globe-logo { width: 40px; height: 40px; background: var(--globe-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; box-shadow: 0 4px 10px rgba(0,56,168,0.3);}
+        h2 { color: var(--globe-blue); margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;}
+        
+        /* --- TABS DESIGN --- */
+        .tab-nav { display: flex; background: #e2e8f0; padding: 5px; border-radius: 10px; margin-bottom: 30px; }
+        .tab-btn { flex: 1; padding: 12px; background: transparent; border: none; cursor: pointer; font-size: 15px; font-weight: bold; color: var(--text-muted); border-radius: 8px; transition: 0.3s; }
+        .tab-btn:hover { color: var(--globe-blue); }
+        .tab-btn.active { background: white; color: var(--globe-blue); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        
+        /* --- ZOOM-SCROLL ANIMATION ON TABS --- */
+        .tab-pane { display: none; }
+        .tab-pane.active { 
+            display: block; 
+            animation: zoomScrollIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; 
+        }
+        
+        @keyframes zoomScrollIn {
+            0% { 
+                filter: blur(2rem); 
+                transform: scale(0.85); 
+                opacity: 0; 
+            }
+            100% { 
+                filter: blur(0); 
+                transform: scale(1); 
+                opacity: 1; 
+            }
+        }
+
+        /* --- DASHBOARD TAB --- */
+        .filter-banner { background: var(--globe-blue); padding: 25px 20px; border-radius: 10px; text-align: center; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,56,168,0.2); }
+        .filter-banner label { color: #fff; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; font-weight: bold;}
+        .custom-dropdown-container { position: relative; width: 70%; margin: auto; text-align: left;}
+        .dropdown-header { background: #fff; padding: 14px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: var(--globe-cyan); font-size: 16px; transition: 0.2s;}
+        .dropdown-header:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .dropdown-header svg { fill: var(--globe-cyan); width: 14px; height: 14px; transition: transform 0.3s ease; }
+        .custom-dropdown-container.open .dropdown-header svg { transform: rotate(180deg); }
+        .dropdown-list { position: absolute; top: 100%; left: 0; width: 100%; background: #fff; border-radius: 8px; box-shadow: 0 6px 16px rgba(0,0,0,0.15); margin-top: 8px; list-style: none; padding: 10px 0; z-index: 100; display: none; max-height: 320px; overflow-y: auto; }
+        .custom-dropdown-container.open .dropdown-list { display: block; animation: slideDown 0.2s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .dropdown-item { padding: 12px 20px; color: var(--text-main); cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .dropdown-item:hover { background: #f0f9ff; color: var(--globe-cyan); }
+        .dropdown-item.selected { background: var(--globe-cyan); color: #fff; font-weight: bold; }
+        .dropdown-group { padding: 15px 20px 5px; font-size: 12px; font-weight: bold; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; cursor: default; }
+
+        .dash-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; text-align: center; }
+        .dash-item { background: white; padding: 20px 20px 15px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid #eaf0f7; display: flex; flex-direction: column;}
+        .dash-name { font-weight: bold; font-size: 15px; color: var(--text-main); text-transform: uppercase; letter-spacing: 1px;}
+        .dash-hours { font-size: 32px; color: var(--globe-cyan); margin: 10px 0; font-weight: 800; }
+        .dash-footer { margin-top: auto; padding-top: 12px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
+        .dash-avg-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;}
+        .dash-avg-value { font-size: 13px; font-weight: 700; color: #007bb5; background: #e6f6ff; padding: 4px 10px; border-radius: 20px;}
+        #loading { text-align: center; font-style: italic; color: white; font-size: 15px; font-weight: bold; margin-top: 20px;}
+
+        /* --- ENTERPRISE FORM UI --- */
+        .action-toggle { display: flex; background: #f1f5f9; padding: 6px; border-radius: 12px; margin-bottom: 25px; border: 1px solid #e2e8f0;}
+        .action-toggle label { flex: 1; text-align: center; padding: 12px; font-size: 15px; font-weight: 600; color: var(--text-muted); cursor: pointer; border-radius: 8px; transition: 0.3s; margin: 0; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        .action-toggle input[type="radio"] { display: none; }
+        .action-toggle input[type="radio"]:checked + label { background: white; color: var(--globe-blue); box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+
+        .form-section-title { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; color: var(--globe-blue); margin: 30px 0 15px; padding-bottom: 8px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px;}
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .full-width { grid-column: 1 / -1; }
+        
+        .form-group { display: flex; flex-direction: column; }
+        .form-label { font-weight: 600; font-size: 13px; color: #475569; margin-bottom: 6px; }
+        .modern-input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; background: #f8fafc; color: var(--text-main); font-family: inherit; transition: all 0.3s ease; box-sizing: border-box;}
+        .modern-input:focus { outline: none; border-color: var(--globe-blue); background: #fff; box-shadow: 0 0 0 4px rgba(0,56,168,0.1); }
+        textarea.modern-input { resize: vertical; min-height: 80px; }
+        
+        .row-input { display: none; background: #fffbe4; padding: 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #fde047; border-left: 5px solid #eab308;}
+        .help-text { font-size: 13px; color: #854d0e; font-style: italic; display: block; margin-top: 8px; line-height: 1.5;}
+
+        .pill-group { display: flex; flex-wrap: wrap; gap: 10px; }
+        .pill-group label { cursor: pointer; }
+        .pill-group input[type="checkbox"] { display: none; }
+        .engineer-pill { display: inline-flex; align-items: center; padding: 10px 18px; border: 1px solid var(--border-color); border-radius: 30px; font-size: 14px; font-weight: 600; color: var(--text-muted); background: #f8fafc; transition: all 0.2s ease; }
+        .pill-group input[type="checkbox"]:checked + .engineer-pill { background: var(--globe-blue); color: white; border-color: var(--globe-blue); box-shadow: 0 4px 10px rgba(0,56,168,0.3); transform: translateY(-1px);}
+
+        button[type="submit"] { background: linear-gradient(135deg, var(--globe-blue), #0050b3); color: white; padding: 16px; border: none; cursor: pointer; font-weight: 800; font-size: 16px; border-radius: 8px; width: 100%; margin-top: 35px; transition: all 0.3s; letter-spacing: 0.5px; box-shadow: 0 4px 15px rgba(0,56,168,0.3);}
+        button[type="submit"]:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,56,168,0.4); }
+        button[type="submit"]:active { transform: translateY(0); }
+
+    </style>
+
+    <script>
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbziv78GU88PTHvKaAtfJZ8foh5nLn_NmFHMpTPKQge-LQ-oITCcgm1qc6eysVedalBh/exec";
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            document.getElementById('btn-' + tabId).classList.add('active');
+        }
+
+        function setupCustomDropdown() {
+            const container = document.getElementById('custom-dropdown');
+            const header = document.getElementById('dropdown-header');
+            header.addEventListener('click', function(e) {
+                container.classList.toggle('open');
+                e.stopPropagation();
+            });
+            document.addEventListener('click', function(e) {
+                if (!container.contains(e.target)) container.classList.remove('open');
+            });
+        }
+
+        function updateDashboard(selectedDate = "") {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('dash-grid').style.display = 'none';
+            document.getElementById('loading').innerText = "Syncing with Database...";
+
+            fetch(WEB_APP_URL + "?action=getManhours&date=" + encodeURIComponent(selectedDate))
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('dash-grid').style.display = 'grid';
+                    const engineers = ["Alan", "Astaire", "Gilbert", "Cris", "Leo", "Ronald"];
+                    engineers.forEach(eng => {
+                        if (data[eng]) {
+                            document.getElementById('hrs-' + eng).innerText = data[eng].total || 0;
+                            document.getElementById('avg-' + eng).innerText = (data[eng].avg || 0) + " hrs";
+                        }
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('loading').innerText = "Failed to load dashboard data.";
+                });
+        }
+
+        function createDropdownItem(text, value, isGroup, listElement, headerTextElement) {
+            let li = document.createElement('li');
+            if (isGroup) {
+                li.className = 'dropdown-group';
+                li.textContent = text;
+            } else {
+                li.className = 'dropdown-item';
+                if (value === "") li.classList.add('selected'); 
+                li.textContent = text;
+                li.onclick = function(e) {
+                    document.querySelectorAll('.dropdown-item').forEach(el => el.classList.remove('selected'));
+                    li.classList.add('selected');
+                    headerTextElement.textContent = text;
+                    document.getElementById('custom-dropdown').classList.remove('open');
+                    updateDashboard(value);
+                    e.stopPropagation();
+                };
+            }
+            listElement.appendChild(li);
+        }
+
+        window.onload = function() {
+            setupCustomDropdown();
+            updateDashboard(""); 
+
+            fetch(WEB_APP_URL + "?action=getDates")
+                .then(response => response.json())
+                .then(data => {
+                    let dropdownList = document.getElementById('dropdown-list');
+                    let headerText = document.getElementById('dropdown-header-text');
+                    dropdownList.innerHTML = ''; 
+                    createDropdownItem("📊 Entire Year / All Time", "", false, dropdownList, headerText);
+                    if (data.months && data.months.length > 0) {
+                        createDropdownItem("By Month", null, true, dropdownList, headerText);
+                        data.months.forEach(m => createDropdownItem(m, m, false, dropdownList, headerText));
+                    }
+                    if (data.dates && data.dates.length > 0) {
+                        createDropdownItem("By Specific Date", null, true, dropdownList, headerText);
+                        data.dates.forEach(d => createDropdownItem(d, d, false, dropdownList, headerText));
+                    }
+                })
+                .catch(error => console.error('Error fetching dates:', error));
+        };
+
+        function toggleRowInput() {
+            var action = document.querySelector('input[name="action"]:checked').value;
+            var rowDiv = document.getElementById('row-input-group');
+            var circuitInput = document.getElementById('update-circuit');
+            if (action === 'update') {
+                rowDiv.style.display = 'block';
+                circuitInput.setAttribute('required', 'true');
+            } else {
+                rowDiv.style.display = 'none';
+                circuitInput.removeAttribute('required');
+            }
+        }
+
+        function prepareSubmit() {
+            var checkboxes = document.querySelectorAll('.handled-cb:checked');
+            var values = [];
+            for (var i = 0; i < checkboxes.length; i++) { values.push(checkboxes[i].value); }
+            document.getElementById('handled-hidden').value = values.join(', ');
+            return true;
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    
+    <div class="header-section">
+        <div class="globe-logo">G</div>
+        <h2>STM B2B Core Data Tracker</h2>
+    </div>
+    
+    <div class="tab-nav">
+        <button id="btn-dashboard" class="tab-btn active" onclick="switchTab('dashboard')">📊 Performance Dashboard</button>
+        <button id="btn-form" class="tab-btn" onclick="switchTab('form')">📝 Activity Entry Form</button>
+    </div>
+
+    <div id="dashboard" class="tab-pane active">
+        <div class="filter-banner">
+            <label>Filter Dashboard By Timeframe</label>
+            <div class="custom-dropdown-container" id="custom-dropdown">
+                <div class="dropdown-header" id="dropdown-header">
+                    <span id="dropdown-header-text">Loading timeframes...</span>
+                    <svg viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>
+                </div>
+                <ul class="dropdown-list" id="dropdown-list">
+                    <li class="dropdown-item">Loading...</li>
+                </ul>
+            </div>
+        </div>
+
+        <div id="loading">Syncing with Database...</div>
+        <div class="dash-grid" id="dash-grid" style="display: none;">
+            <div class="dash-item"><div class="dash-name">Alan</div><div class="dash-hours" id="hrs-Alan">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Alan">0 hrs</span></div></div>
+            <div class="dash-item"><div class="dash-name">Astaire</div><div class="dash-hours" id="hrs-Astaire">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Astaire">0 hrs</span></div></div>
+            <div class="dash-item"><div class="dash-name">Gilbert</div><div class="dash-hours" id="hrs-Gilbert">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Gilbert">0 hrs</span></div></div>
+            <div class="dash-item"><div class="dash-name">Cris</div><div class="dash-hours" id="hrs-Cris">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Cris">0 hrs</span></div></div>
+            <div class="dash-item"><div class="dash-name">Leo</div><div class="dash-hours" id="hrs-Leo">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Leo">0 hrs</span></div></div>
+            <div class="dash-item"><div class="dash-name">Ronald</div><div class="dash-hours" id="hrs-Ronald">0</div><div class="dash-footer"><span class="dash-avg-label">⏱️ Avg/Tkt</span><span class="dash-avg-value" id="avg-Ronald">0 hrs</span></div></div>
+        </div>
+    </div>
+
+    <div id="form" class="tab-pane">
+        <form action="https://script.google.com/macros/s/AKfycbziv78GU88PTHvKaAtfJZ8foh5nLn_NmFHMpTPKQge-LQ-oITCcgm1qc6eysVedalBh/exec" method="GET" target="_blank" onsubmit="return prepareSubmit()">
+
+            <div class="action-toggle">
+                <input type="radio" id="add" name="action" value="add" checked onchange="toggleRowInput()">
+                <label for="add">➕ Log New Activity</label>
+                
+                <input type="radio" id="update" name="action" value="update" onchange="toggleRowInput()">
+                <label for="update">✏️ Update Smart Record</label>
+            </div>
+
+            <div id="row-input-group" class="row-input form-group">
+                <label class="form-label" for="update-circuit">Target Circuit ID to Update:</label>
+                <input type="text" id="update-circuit" name="update_circuit" class="modern-input" placeholder="e.g. IC-AXZ-0366">
+                <span class="help-text"><strong>Smart Merge Protocol Active:</strong> Leave fields below blank to retain existing data in the database. Only modified fields will be overwritten.</span>
+            </div>
+
+            <div class="form-section-title">📂 1. Ticket Information</div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">Date of Activity</label>
+                    <input type="text" name="activity_date" class="modern-input" placeholder="MM/DD/YYYY">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Task Type</label>
+                    <select name="task" class="modern-input">
+                        <option value="">-- Select Task --</option>
+                        <option value="Incident Support">Incident Support</option>
+                        <option value="Problem Management">Problem Management</option>
+                        <option value="Provisioning Consultations">Provisioning Consultations</option>
+                        <option value="Service Improvement">Service Improvement</option>
+                        <option value="Team Initiative">Team Initiative</option>
+                        <option value="Engineering Consultations">Engineering Consultations</option>
+                        <option value="Meetings/Other Activities">Meetings/Other Activities</option>
+                        <option value="TeachUs">TeachUs</option>
+                        <option value="TeachBack">TeachBack</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Service Level</label>
+                    <select name="service" class="modern-input">
+                        <option value="">-- Select Service --</option>
+                        <option value="IPVPN">IPVPN</option>
+                        <option value="VPLS">VPLS</option>
+                        <option value="Internet">Internet</option>
+                        <option value="DLL">DLL</option>
+                        <option value="IPL">IPL</option>
+                        <option value="Hyper Scaler">Hyper Scaler</option>
+                        <option value="Business Voice">Business Voice</option>
+                        <option value="SDWAN">SDWAN</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Customer Name</label>
+                    <input type="text" name="customer" class="modern-input" placeholder="e.g. Pinoy Lotto">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Circuit ID</label>
+                    <input type="text" name="circuit" class="modern-input" placeholder="e.g. IC-AXZ-0366">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label">Activity/Escalation Details</label>
+                    <textarea name="details" class="modern-input" placeholder="Provide detailed network context..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-section-title">🚀 2. Escalation & Assignment</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">FS Ticket No.</label>
+                    <input type="text" name="ticket" class="modern-input" placeholder="Ticket #">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">IC Ticket (Network)</label>
+                    <input type="text" name="ic_ticket" class="modern-input" placeholder="IC Ticket #">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Streamline Ticket</label>
+                    <input type="text" name="streamline" class="modern-input" placeholder="Streamline #">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Current Status</label>
+                    <select name="status" class="modern-input">
+                        <option value="">-- Select Status --</option>
+                        <option value="Closed">Closed</option>
+                        <option value="Ongoing">Ongoing</option>
+                        <option value="On-Hold">On-Hold</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Escalating Team</label>
+                    <input type="text" name="team" class="modern-input" placeholder="e.g. SF, SRT-NIM">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Escalating Engineer</label>
+                    <input type="text" name="engineer" class="modern-input" placeholder="e.g. Dyan Gruta">
+                </div>
+
+                <div class="form-group full-width">
+                    <label class="form-label">Assigned Core Engineers (Multi-Select)</label>
+                    <div class="pill-group">
+                        <label><input type="checkbox" class="handled-cb" value="Alan"><span class="engineer-pill">Alan</span></label>
+                        <label><input type="checkbox" class="handled-cb" value="Astaire"><span class="engineer-pill">Astaire</span></label>
+                        <label><input type="checkbox" class="handled-cb" value="Gilbert"><span class="engineer-pill">Gilbert</span></label>
+                        <label><input type="checkbox" class="handled-cb" value="Cris"><span class="engineer-pill">Cris</span></label>
+                        <label><input type="checkbox" class="handled-cb" value="Leo"><span class="engineer-pill">Leo</span></label>
+                        <label><input type="checkbox" class="handled-cb" value="Ronald"><span class="engineer-pill">Ronald</span></label>
+                    </div>
+                    <input type="hidden" name="handled" id="handled-hidden">
+                </div>
+            </div>
+
+            <div class="form-section-title">⏱️ 3. Resolution Metrics</div>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label class="form-label">Escalated Date/Time</label>
+                    <input type="text" name="escalated" class="modern-input" placeholder="MM/DD HH:MM">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Resolved Date/Time</label>
+                    <input type="text" name="resolved" class="modern-input" placeholder="MM/DD HH:MM">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">On-Hold Duration (H:MM)</label>
+                    <input type="text" name="onhold" class="modern-input" placeholder="0:00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Total Manhours</label>
+                    <input type="number" step="0.1" name="manhours" class="modern-input" placeholder="e.g. 1.5">
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">Resolution Remarks / Actions Done</label>
+                    <textarea name="remarks" class="modern-input" placeholder="Document all troubleshooting steps..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-section-title">🏷️ 4. Reason For Outage (RFO)</div>
+            <div class="form-grid">
+                <div class="form-group full-width">
+                    <label class="form-label">RFO Tagging Category</label>
+                    <select name="rfo_tag" class="modern-input">
+                        <option value="">-- Select Official RFO Tag --</option>
+                        <option value="Consultation Only">Consultation Only</option>
+                        <option value="Configuration Issue">Configuration Issue</option>
+                        <option value="Last Mile">Last Mile</option>
+                        <option value="Power Failure">Power Failure</option>
+                        <option value="Circuit Congestion">Circuit Congestion</option>
+                        <option value="Network Congestion">Network Congestion</option>
+                        <option value="Software Bug">Software Bug</option>
+                        <option value="Fiber Cut">Fiber Cut</option>
+                        <option value="Hardware Shelf Failure">Hardware Shelf Failure</option>
+                        <option value="Human Error">Human Error</option>
+                        <option value="Routing Issue">Routing Issue</option>
+                        <option value="Switching Issue">Switching Issue</option>
+                        <option value="Port Problem">Port Problem</option>
+                        <option value="Duplex Settings Mismatch">Duplex Settings Mismatch</option>
+                        <option value="Hardware Card Failure">Hardware Card Failure</option>
+                        <option value="Hardware Module Failure">Hardware Module Failure</option>
+                        <option value="Hardware Hangup">Hardware Hangup</option>
+                        <option value="Trail Hangup">Trail Hangup</option>
+                        <option value="Customer Issue">Customer Issue</option>
+                        <option value="Activities-related Issue">Activities-related Issue</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label class="form-label">RFO Specific Details</label>
+                    <textarea name="rfo_details" class="modern-input" placeholder="Elaborate on the root cause..."></textarea>
+                </div>
+            </div>
+
+            <button type="submit">Submit to Secure Database</button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
